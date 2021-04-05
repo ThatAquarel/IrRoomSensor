@@ -1,0 +1,25 @@
+<annotation>
+	<folder>/home/xiazy/ml-docker-vision-finetune-iteration/shared_volume/label/ir</folder>
+	<filename>/home/xiazy/ml-docker-vision-finetune-iteration/shared_volume/label/ir/image-20210325-131329-523385-1-7a701a97-43f9-4674-ade4-a4f250d88f58-IR</filename>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>24</width>
+		<height>32</height>
+		<depth>1</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>person</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>7</xmin>
+			<ymin>3</ymin>
+			<xmax>14</xmax>
+			<ymax>14</ymax>
+		</bndbox>
+	</object>
+</annotation>

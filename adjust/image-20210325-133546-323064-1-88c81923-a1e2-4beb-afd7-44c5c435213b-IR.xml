@@ -1,0 +1,26 @@
+<annotation verified="yes">
+	<folder>ir_3_channel</folder>
+	<filename>image-20210325-133546-323064-1-88c81923-a1e2-4beb-afd7-44c5c435213b-IR.jpg</filename>
+	<path>/home/xiazy/ml-docker-vision-finetune-iteration/shared_volume/label/ir_3_channel/image-20210325-133546-323064-1-88c81923-a1e2-4beb-afd7-44c5c435213b-IR.jpg</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>32</width>
+		<height>24</height>
+		<depth>1</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>person</name>
+		<pose>Unspecified</pose>
+		<truncated>1</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>24</xmin>
+			<ymin>10</ymin>
+			<xmax>32</xmax>
+			<ymax>14</ymax>
+		</bndbox>
+	</object>
+</annotation>
