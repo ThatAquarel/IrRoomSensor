@@ -1,22 +1,25 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from helpers import preprocess, postprocess, split_data
+from helpers import preprocess, postprocess
+# from helpers import preprocess, postprocess, split_data
 from model import model_arch
 from train import checkpoint_path, images, bounding_boxes
 
 
 def main():
-    x_, y_ = preprocess(images, bounding_boxes)
+    x, y = preprocess(images, bounding_boxes)
 
-    train_x, train_y, test_x, test_y = split_data(x_, y_)
+    # x, y = train_x, train_y
+
+    # train_x, train_y, test_x, test_y = split_data(x_, y_)
 
     model = model_arch()
     model.compile("adam", "mse", metrics=['accuracy', 'mse'])
 
     model.load_weights(checkpoint_path)
 
-    pred_y = model.predict(test_x)
+    pred_y = model.predict(x)
 
     pred_y = postprocess(pred_y)
 
@@ -28,9 +31,8 @@ def main():
     # plt.show()
 
     display = 4
-    detection_range = 0.10
 
-    for i in range(test_x.shape[0] // display):
+    for i in range(x.shape[0] // display):
         j = i * display
 
         fig, ax = plt.subplots(display, 4)
@@ -48,26 +50,12 @@ def main():
 
             adjusted = np.where((lower < adjusted) & (adjusted <= upper), 1, np.zeros(shape=adjusted.shape))
 
-            ax[k][0].imshow(test_x[j + k])
+            ax[k][0].imshow(x[j + k])
             ax[k][1].imshow(pred_y[j + k].T)
             ax[k][2].imshow(adjusted)
-            ax[k][3].imshow(np.reshape(test_y[j + k], (8, 8)).T)
+            ax[k][3].imshow(np.reshape(y[j + k], (8, 8)).T)
 
         plt.show()
-
-    # fig, ax = plt.subplots()
-    # pred_bounding_boxes = postprocess(pred_y)
-    #
-    # fig, ax = plt.subplots()
-    # im = ax.imshow(test_x[0])
-    # plt.colorbar(im)
-    #
-    # for coords in pred_bounding_boxes[0]:
-    #     box = patches.Rectangle((coords[0], coords[1]), coords[2], coords[3], linewidth=2, edgecolor='r',
-    #                             facecolor='none')
-    #     ax.add_patch(box)
-    #
-    # plt.show()
 
 
 if __name__ == '__main__':

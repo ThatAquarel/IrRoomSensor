@@ -9,12 +9,12 @@ from PIL import Image
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 
-from dataset_reader import parse_dataset, parse_coords
+from dataset_reader import parse_dataset_xml, parse_coords
 
 sources = ".\\adjust"
-output = ".\\generated_dataset"
+output = ".\\dataset_xml"
 
-images, boxes = parse_dataset(sources)
+images, boxes = parse_dataset_xml(sources)
 
 flips = [0, 1, (0, 1)]
 brightnesses = [-96, -64, 64, 96]

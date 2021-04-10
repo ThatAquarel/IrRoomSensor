@@ -3,12 +3,14 @@ from os.path import join
 import numpy as np
 from PIL import Image
 from scipy import interpolate
+import warnings
+from tqdm import tqdm
 
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 divisions = 16
 radius_steps = 3
-write_dir = ".\\virtual_dataset"
+write_dir = ".\\dataset_npy"
 
 
 def circle_map(radius, people_x, people_y, people_count, size):
@@ -23,7 +25,9 @@ def circle_map(radius, people_x, people_y, people_count, size):
     opposite = sin * radius + y
     adjacent = cos * radius + x
 
-    return np.reshape(np.dstack((opposite, adjacent)), (people_count * size, 2)).astype(np.int32)
+    coords = np.reshape(np.dstack((opposite, adjacent)), (people_count * size, 2)).astype(np.int32)
+
+    return np.clip(coords, 0, 31)
 
 
 def main():
@@ -41,9 +45,9 @@ def main():
     people_y = people_coords[:, 1]
 
     predict = np.zeros(shape=(8, 8))
-    predict_coords = np.round(people_coords / 4, decimals=0).astype(np.int32)
+    predict_coords = np.clip(people_coords / 4, 0, 7).astype(np.int32)
     for coords in predict_coords:
-        predict[coords[1], coords[0]] = 1
+        predict[coords[0], coords[1]] = 1
 
     if people_count > 0:
         size = divisions * radius_steps
@@ -61,17 +65,18 @@ def main():
         final_coords_large = circle_map(radius_large, people_x, people_y, people_count, size)
 
         for coords in final_coords_small:
-            image[coords[0]][coords[1]] = 1
+            if image[coords[0]][coords[1]] == 0:
+                image[coords[0]][coords[1]] = 0.8
 
         for coords in final_coords_large:
-            if image[coords[0]][coords[1]] != 1:
+            if image[coords[0]][coords[1]] == 0:
                 image[coords[0]][coords[1]] = 0.25
 
     people_mask = image.copy().astype(bool)
-    people_skew = np.random.uniform(0, 0.5, size=(32, 32))
+    people_skew = np.random.uniform(0, 0.2, size=(32, 32))
 
     background_mask = np.where(image == 1, -1, image) + 1
-    background_skew = np.random.uniform(0, 0.2, size=(32, 32))
+    background_skew = np.random.uniform(0, 0.5, size=(32, 32))
 
     image += people_mask.astype("float32") * people_skew
     image += background_mask.astype("float32") * background_skew
@@ -92,14 +97,16 @@ def main():
     if a_max > 0.75:
         image /= a_max
 
-    if not a_min < 0 and not a_max > 1.75:
-        # plt.imshow(image)
-        # plt.colorbar()
-        # plt.show()
+    if not a_min < 0 and not a_max > 2.5:
+        # fig, ax = plt.subplots(1, 2)
         #
-        # plt.imshow(predict)
-        # plt.colorbar()
+        # im = ax[0].imshow(image)
+        # plt.colorbar(im)
+        #
+        # ax[1].imshow(predict.T)
+        #
         # plt.show()
+        # plt.close(fig)
 
         return image, predict
     else:
@@ -108,14 +115,15 @@ def main():
 
 if __name__ == '__main__':
     # main()
+    warnings.filterwarnings('ignore')
 
-    for i in range(100):
+    for i in tqdm(range(16384)):
         out = None
 
         while out is None:
             out = main()
 
-        pil_image = Image.fromarray(np.repeat((out[0].reshape((32, 32, 1)) * 255).astype("uint8"), 3, axis=2))
+        pil_image = Image.fromarray((out[0] * 255).astype("uint8"))
         pil_image.save(join(write_dir, "image-{0}.jpg".format(i)))
 
         np.save(join(write_dir, "image-{0}.npy".format(i)), out[1])

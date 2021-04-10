@@ -5,18 +5,21 @@ import numpy as np
 import tensorflow as tf
 from PIL import Image
 
-from dataset_reader import parse_dataset, parse_coords
-from helpers import bounding_box_normalize, preprocess, split_data
+from dataset_reader import parse_dataset_xml, parse_dataset_npy, parse_coords
+# from helpers import bounding_box_normalize, preprocess, split_data
+from helpers import bounding_box_normalize, preprocess
 from model import model_arch
 
-dataset = ".\\generated_dataset"
-images, boxes = parse_dataset(dataset)
+dataset_xml = ".\\dataset_xml"
+dataset_npy = ".\\dataset_npy"
+
+images, boxes = parse_dataset_xml(dataset_xml)
 images = [np.asarray(Image.fromarray(image).resize((32, 32))) for image in images]
 boxes = [parse_coords(box) for box in boxes]
 
 max_detect = max([box.shape[0] for box in boxes])
 num_images = len(images)
-num_epochs = 256  # 16384
+num_epochs = 128
 
 checkpoint_path = "training/checkpoint.ckpt"
 checkpoint_dir = os.path.dirname(checkpoint_path)
@@ -32,9 +35,14 @@ for bounding_box in bounding_boxes:
 def main():
     global images, bounding_boxes, max_detect, num_images
 
-    x_, y_ = preprocess(images, bounding_boxes)
+    train_x, train_y = parse_dataset_npy(dataset_npy)
+    train_x = np.reshape(train_x, (train_x.shape[0], 32, 32, 1))
+    train_x /= 255
+    train_y = np.reshape(train_y, (train_y.shape[0], 64))
 
-    train_x, train_y, test_x, test_y = split_data(x_, y_)
+    test_x, test_y = preprocess(images, bounding_boxes)
+
+    # train_x, train_y, test_x, test_y = split_data(x_, y_)
 
     model = model_arch()
     model.compile("adam", "mse", metrics=['accuracy', 'mse'])
