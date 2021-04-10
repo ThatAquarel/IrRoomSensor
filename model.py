@@ -17,8 +17,9 @@ def model_arch():
         keras.layers.Flatten(),
 
         keras.layers.Activation(tf.nn.sigmoid),
-        keras.layers.Dense(512),
-        keras.layers.Dense(128)])
+        keras.layers.Dense(128),
+        keras.layers.Dense(64),
+    ])
 
 # acc: 0.55
 # val acc: 0.12

@@ -16,7 +16,7 @@ boxes = [parse_coords(box) for box in boxes]
 
 max_detect = max([box.shape[0] for box in boxes])
 num_images = len(images)
-num_epochs = 512  # 16384
+num_epochs = 256  # 16384
 
 checkpoint_path = "training/checkpoint.ckpt"
 checkpoint_dir = os.path.dirname(checkpoint_path)

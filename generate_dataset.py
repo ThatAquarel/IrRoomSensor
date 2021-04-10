@@ -1,98 +1,121 @@
-import os
-import xml.etree.ElementTree as ElementTree
 from os.path import join
 
-import matplotlib.patches as patches
-import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
-from bs4 import BeautifulSoup
-from tqdm import tqdm
+from scipy import interpolate
 
-from dataset_reader import parse_dataset, parse_coords
+# import matplotlib.pyplot as plt
 
-sources = ".\\adjust"
-output = ".\\generated_dataset"
-
-images, boxes = parse_dataset(sources)
-
-flips = [0, 1, (0, 1)]
-brightnesses = [-96, -64, 64, 96]
+divisions = 16
+radius_steps = 3
+write_dir = ".\\virtual_dataset"
 
 
-def object_writer(root, x, y):
-    person = ElementTree.SubElement(root, "object")
-    name = ElementTree.SubElement(person, "name")
-    name.text = "person"
-    pose = ElementTree.SubElement(person, "pose")
-    pose.text = "Unspecified"
-    truncated = ElementTree.SubElement(person, "truncated")
-    truncated.text = "0"
-    difficult = ElementTree.SubElement(person, "difficult")
-    difficult.text = "0"
-    box = ElementTree.SubElement(person, "bndbox")
-    x_min = ElementTree.SubElement(box, "xmin")
-    x_min.text = str(x[0])
-    y_min = ElementTree.SubElement(box, "ymin")
-    y_min.text = str(y[0])
-    x_max = ElementTree.SubElement(box, "xmax")
-    x_max.text = str(x[1])
-    y_max = ElementTree.SubElement(box, "ymax")
-    y_max.text = str(y[1])
+def circle_map(radius, people_x, people_y, people_count, size):
+    x = np.reshape(np.repeat(people_x, size), (people_count, size))
+    y = np.reshape(np.repeat(people_y, size), (people_count, size))
 
-    return root
+    angles = np.linspace(0, 2 * np.pi, divisions)
+    angles = np.repeat(angles, radius_steps)
+    sin = np.sin(angles)
+    cos = np.cos(angles)
+
+    opposite = sin * radius + y
+    adjacent = cos * radius + x
+
+    return np.reshape(np.dstack((opposite, adjacent)), (people_count * size, 2)).astype(np.int32)
 
 
 def main():
-    global images, boxes, flips, brightnesses, output
+    image = np.zeros(shape=(32, 32))
 
-    for i, image in enumerate(tqdm(images)):
-        fig, ax = plt.subplots(len(flips), len(brightnesses))
+    people_count = np.random.randint(0, 5)
 
-        coords = parse_coords(boxes[i])
+    people_coords = np.unique(np.random.randint(0, 4, size=(people_count, 2)), axis=0) * 8.
+    people_count = people_coords.shape[0]
 
-        for j, flip in enumerate(flips):
-            for k, brightness in enumerate(brightnesses):
-                out_image = join(output, "image-{0}-{1}-{2}.jpg".format(i, j, k))
-                out_xml = join(output, "image-{0}-{1}-{2}.xml".format(i, j, k))
+    skew = np.random.uniform(-3, 3, size=(people_count, 2))
+    people_coords += skew
 
-                tree = ElementTree.parse("raw.xml")
-                root = tree.getroot()
-                root[1].text = out_image
-                root[2].text = join(os.path.abspath(os.getcwd()), output, out_image)
+    people_x = people_coords[:, 0]
+    people_y = people_coords[:, 1]
 
-                modified = np.clip(np.flip(image, flip).astype(np.float32) + brightness, 0, 255).astype(np.uint8)
+    predict = np.zeros(shape=(8, 8))
+    predict_coords = np.round(people_coords / 4, decimals=0).astype(np.int32)
+    for coords in predict_coords:
+        predict[coords[1], coords[0]] = 1
 
-                ax[j][k].imshow(modified)
+    if people_count > 0:
+        size = divisions * radius_steps
 
-                for coord in coords:
-                    x = np.copy(coord[0])
-                    y = np.copy(coord[1])
+        radius = np.random.randint(0, 4, size=(people_count, divisions))
 
-                    if flip == 0:
-                        y = np.sort(24 - y)
-                    elif flip == 1:
-                        x = np.sort(32 - x)
-                    elif flip == (0, 1):
-                        x = np.sort(32 - x)
-                        y = np.sort(24 - y)
+        radius_adjust = []
+        for radius_ in radius:
+            radius_adjust.append(np.linspace(0, radius_, radius_steps, axis=1))
+        radius_adjust = np.array(radius_adjust)
 
-                    box = patches.Rectangle((x[0], y[0]), x[1] - x[0], y[1] - y[0], linewidth=2, edgecolor='r',
-                                            facecolor='none')
-                    ax[j][k].add_patch(box)
+        radius_small = np.reshape(radius_adjust, (people_count, size))
+        radius_large = np.reshape(radius_adjust, (people_count, size)) + 1
+        final_coords_small = circle_map(radius_small, people_x, people_y, people_count, size)
+        final_coords_large = circle_map(radius_large, people_x, people_y, people_count, size)
 
-                    root = object_writer(root, x, y)
+        for coords in final_coords_small:
+            image[coords[0]][coords[1]] = 1
 
-                xml_file = open(out_xml, "w+")
-                xml_file.write(BeautifulSoup(ElementTree.tostring(root, "utf-8"), "html.parser").prettify())
-                xml_file.close()
+        for coords in final_coords_large:
+            if image[coords[0]][coords[1]] != 1:
+                image[coords[0]][coords[1]] = 0.25
 
-                image_file = Image.fromarray(modified)
-                image_file.save(out_image)
+    people_mask = image.copy().astype(bool)
+    people_skew = np.random.uniform(0, 0.5, size=(32, 32))
 
-        plt.show()
-        plt.close(fig)
+    background_mask = np.where(image == 1, -1, image) + 1
+    background_skew = np.random.uniform(0, 0.2, size=(32, 32))
+
+    image += people_mask.astype("float32") * people_skew
+    image += background_mask.astype("float32") * background_skew
+
+    if people_count > 1:
+        interp_x = np.append(people_x, [0, 0, 31, 31])
+        interp_y = np.append(people_y, [0, 31, 0, 31])
+        interp_z = np.append(np.ones(people_count), np.zeros(4))
+        f = interpolate.interp2d(interp_x, interp_y, interp_z)
+        interp_map = np.linspace(0, 31, 32)
+
+        interp_skew = f(interp_map, interp_map)
+        image += (interp_skew * 0.1)
+
+    a_max = np.amax(image)
+    a_min = np.amin(image)
+
+    if a_max > 0.75:
+        image /= a_max
+
+    if not a_min < 0 and not a_max > 1.75:
+        # plt.imshow(image)
+        # plt.colorbar()
+        # plt.show()
+        #
+        # plt.imshow(predict)
+        # plt.colorbar()
+        # plt.show()
+
+        return image, predict
+    else:
+        return None
 
 
 if __name__ == '__main__':
-    main()
+    # main()
+
+    for i in range(100):
+        out = None
+
+        while out is None:
+            out = main()
+
+        pil_image = Image.fromarray(np.repeat((out[0].reshape((32, 32, 1)) * 255).astype("uint8"), 3, axis=2))
+        pil_image.save(join(write_dir, "image-{0}.jpg".format(i)))
+
+        np.save(join(write_dir, "image-{0}.npy".format(i)), out[1])

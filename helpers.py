@@ -14,8 +14,11 @@ def preprocess(images, bounding_boxes):
     x = (images - np.mean(images)) / np.std(images)
     x = np.reshape(x, (num_images, 32, 32, 1))
 
-    bounding_boxes_rescaled = (np.array(bounding_boxes) / 4).astype("int32")
-    y = np.zeros((num_images, 8, 8, 2))
+    # bounding_boxes_rescaled = (np.array(bounding_boxes) / 4).astype("int32")
+    bounding_boxes_rescaled = np.around(np.array(bounding_boxes) / 4, decimals=0).astype("int32")
+    # y = np.zeros((num_images, 8, 8, 2))
+    y = np.zeros((num_images, 8, 8))
+
     for i, frame in enumerate(bounding_boxes_rescaled):
         for coords in frame:
             bx = coords[0]
@@ -23,26 +26,33 @@ def preprocess(images, bounding_boxes):
             bw = coords[2]
             bh = coords[3]
 
-            y[i][bx][by] = [bw, bh]
-    y = y / 8
-    y = np.reshape(y, (num_images, 128))
+            if bw != 0 and bh != 0:
+                y[i][bx][by] = 1
+            # y[i][bx][by] = [bw, bh]
+
+    # y = y / 8
+    # y = np.reshape(y, (num_images, 128))
+    y = np.reshape(y, (num_images, 64))
 
     return x, y
 
 
 def postprocess(pred_y):
-    pred_y = np.reshape(pred_y, (len(pred_y), 8, 8, 2)) * 8
+    # pred_y = np.reshape(pred_y, (len(pred_y), 8, 8, 2)) * 8
+    pred_y = np.reshape(pred_y, (len(pred_y), 8, 8)) * 255
 
-    pred_bounding_boxes = np.zeros((len(pred_y), 8, 8, 4))
-    for i, frame in enumerate(pred_y):
-        for tx, x in enumerate(frame):
-            for ty, y in enumerate(x):
-                tw = y[0]
-                th = y[1]
+    # pred_bounding_boxes = np.zeros((len(pred_y), 8, 8, 4))
+    # for i, frame in enumerate(pred_y):
+    #     for tx, x in enumerate(frame):
+    #         for ty, y in enumerate(x):
+    #             tw = y[0]
+    #             th = y[1]
+    #
+    #             pred_bounding_boxes[i][tx][ty] = [tx, ty, tw, th]
+    #
+    # return np.reshape(pred_bounding_boxes, (len(pred_y), 64, 4)) * 4
 
-                pred_bounding_boxes[i][tx][ty] = [tx, ty, tw, th]
-
-    return np.reshape(pred_bounding_boxes, (len(pred_y), 64, 4)) * 4
+    return pred_y
 
 
 def bounding_box_normalize(boxes, max_detect):
