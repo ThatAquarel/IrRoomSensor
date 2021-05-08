@@ -1,10 +1,13 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from keract import get_activations
+from mpl_toolkits.axes_grid1 import ImageGrid
 
 from helpers import preprocess, postprocess
 # from helpers import preprocess, postprocess, split_data
 from model import model_arch
 from train import checkpoint_path, images, bounding_boxes
+from debug_activations import ActivationsPlot
 
 
 def main():
@@ -18,6 +21,13 @@ def main():
     model.compile("adam", "mse", metrics=['accuracy', 'mse'])
 
     model.load_weights(checkpoint_path)
+
+    x_ = [x[0]]
+    x_ = np.array(x_)
+
+    activations = get_activations(model, x_, auto_compile=False)
+    ap = ActivationsPlot()
+    ap.display(activations)
 
     pred_y = model.predict(x)
 

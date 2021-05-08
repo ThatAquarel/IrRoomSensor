@@ -9,6 +9,7 @@ from dataset_reader import parse_dataset_xml, parse_dataset_npy, parse_coords
 # from helpers import bounding_box_normalize, preprocess, split_data
 from helpers import bounding_box_normalize, preprocess
 from model import model_arch
+from debug_activations import DebugCallback
 
 dataset_xml = ".\\dataset_xml"
 dataset_npy = ".\\dataset_npy"
@@ -61,7 +62,7 @@ def main():
               epochs=num_epochs,
               validation_data=(test_x, test_y),
               verbose=2,
-              callbacks=[checkpoint_callback, tensorboard_callback],
+              callbacks=[checkpoint_callback, tensorboard_callback, DebugCallback(test_x)],
               use_multiprocessing=True,
               workers=16)
 
