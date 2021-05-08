@@ -11,27 +11,26 @@ matplotlib.use('Qt5Agg')
 class ActivationsPlot:
     fig = None
     gs = None
+    image_artists = []
 
     def __init__(self):
         pass
 
-    def display(self, activations):
+    def display(self, activations, epoch):
         if self.fig is None:
             self.fig = plt.figure(figsize=(16, 8))
+            self.gs = self.fig.add_gridspec(1, len(activations))
             self.__draw(activations)
             plt.show(block=False)
-            plt.draw()
         else:
-            plt.clf()
-            self.__draw(activations)
-            plt.draw()
+            self.__update(activations)
+        self.fig.canvas.set_window_title("training epoch {0}".format(epoch))
+        plt.draw()
 
     def destroy(self):
         plt.close(self.fig)
 
     def __draw(self, activations):
-        gs = self.fig.add_gridspec(1, len(activations))
-
         for i, key in enumerate(activations):
             values = activations[key]
 
@@ -45,22 +44,37 @@ class ActivationsPlot:
                 rows = 1
                 cols = 1
 
-            grid = ImageGrid(self.fig, gs[0, i], nrows_ncols=(rows, cols), axes_pad=0.0, share_all=True)
+            grid = ImageGrid(self.fig, self.gs[0, i], nrows_ncols=(rows, cols), axes_pad=0.0, share_all=True)
 
+            artists = []
             for j, ax in enumerate(grid):
                 if j == 0:
                     ax.set_title(key, rotation=15)
 
                 if len(values.shape) <= 2:
-                    ax.imshow(np.reshape(values[0], (values[0].shape[0], 1)))
+                    artist = ax.imshow(np.reshape(values[0], (values[0].shape[0], 1)))
                 else:
-                    ax.imshow(values[0, :, :, j])
+                    artist = ax.imshow(values[0, :, :, j])
+                artists.append(artist)
                 ax.get_yaxis().set_ticks([])
                 ax.get_xaxis().set_ticks([])
+
+            self.image_artists.append(artists)
 
         self.fig.tight_layout()
 
     def __update(self, activations):
+        for i, key in enumerate(activations):
+            values = activations[key]
+            artists = self.image_artists[i]
+
+            for j, artist in enumerate(artists):
+                if len(values.shape) <= 2:
+                    artist.set_data(np.reshape(values[0], (values[0].shape[0], 1)))
+                else:
+                    artist.set_data(values[0, :, :, j])
+
+    def __details(self, event):
         pass
 
 
@@ -78,7 +92,7 @@ class DebugCallback(keras.callbacks.Callback):
         x = np.array(x)
 
         activations = get_activations(self.model, x, auto_compile=False)
-        self.activations_plot.display(activations)
+        self.activations_plot.display(activations, epoch)
         print("<< set breakpoint here")
 
     def on_train_end(self, logs=None):

@@ -27,7 +27,7 @@ def main():
 
     activations = get_activations(model, x_, auto_compile=False)
     ap = ActivationsPlot()
-    ap.display(activations)
+    ap.display(activations, 0)
 
     pred_y = model.predict(x)
 
