@@ -1,2 +1,4 @@
 /backup/
 /dataset_npy/
+*.pyc
+__pycache__/
