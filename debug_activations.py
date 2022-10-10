@@ -8,6 +8,7 @@ from mpl_toolkits.axes_grid1 import ImageGrid
 matplotlib.use('Qt5Agg')
 
 
+# noinspection PyMethodMayBeStatic
 class ActivationsPlot:
     fig = None
     gs = None
@@ -25,6 +26,7 @@ class ActivationsPlot:
         else:
             self.__update(activations)
         self.fig.canvas.set_window_title("training epoch {0}".format(epoch))
+        self.fig.canvas.mpl_connect('button_press_event', self.__details)
         plt.draw()
 
     def destroy(self):
@@ -75,7 +77,22 @@ class ActivationsPlot:
                     artist.set_data(values[0, :, :, j])
 
     def __details(self, event):
-        pass
+        if event.button != 1 or event.inaxes is None:
+            return
+        fig, ax = plt.subplots()
+
+        image = np.array(event.inaxes.images[0].get_array())
+        if (image.shape[0] // image.shape[1]) > 16:
+            image = np.reshape(image, (image.shape[1], image.shape[0]))
+        plt.imshow(image)
+
+        rounded = np.round(image, decimals=1)
+        for i in range(rounded.shape[0]):
+            for j in range(rounded.shape[1]):
+                ax.text(j, i, rounded[i, j], ha="center", va="center", color="w")
+
+        fig.tight_layout()
+        plt.show(block=False)
 
 
 class DebugCallback(keras.callbacks.Callback):

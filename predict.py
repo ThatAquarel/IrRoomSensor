@@ -1,13 +1,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from keract import get_activations
-from mpl_toolkits.axes_grid1 import ImageGrid
 
+from debug_activations import ActivationsPlot
 from helpers import preprocess, postprocess
 # from helpers import preprocess, postprocess, split_data
 from model import model_arch
 from train import checkpoint_path, images, bounding_boxes
-from debug_activations import ActivationsPlot
 
 
 def main():
